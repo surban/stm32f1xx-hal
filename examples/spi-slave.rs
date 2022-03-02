@@ -26,12 +26,12 @@ use stm32f1xx_hal::{
     },
     pac::{self, interrupt, Peripherals, SPI2},
     prelude::*,
-    spi::{Event, Slave, Spi, Spi2NoRemapSlave},
+    spi::{Event, Slave, Spi, Spi2NoRemap},
 };
 
 type SlaveSpi = Spi<
     SPI2,
-    Spi2NoRemapSlave,
+    Spi2NoRemap,
     (
         PB13<Input<Floating>>,
         PB14<Alternate<PushPull>>,

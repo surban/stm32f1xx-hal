@@ -150,9 +150,14 @@ macro_rules! remap {
             type Periph = $SPIX;
             const REMAP: bool = $state;
         }
+        // Master mode pins
         impl<MODE> Sck<$name> for gpio::$SCK<Alternate<MODE>> {}
         impl<MODE> Miso<$name> for gpio::$MISO<Input<MODE>> {}
         impl<MODE> Mosi<$name> for gpio::$MOSI<Alternate<MODE>> {}
+        // Slave mode pins
+        impl<MODE> Ssck<$name> for gpio::$SCK<Input<MODE>> {}
+        impl<MODE> So<$name> for gpio::$MISO<Alternate<MODE>> {}
+        impl<MODE> Si<$name> for gpio::$MOSI<Input<MODE>> {}
     };
 }
 
@@ -163,27 +168,6 @@ remap!(Spi2NoRemap, pac::SPI2, false, PB13, PB14, PB15);
 remap!(Spi3NoRemap, pac::SPI3, false, PB3, PB4, PB5);
 #[cfg(feature = "connectivity")]
 remap!(Spi3Remap, pac::SPI3, true, PC10, PC11, PC12);
-
-macro_rules! remap_slave {
-    ($name:ident, $SPIX:ty, $state:literal, $SCK:ident, $MISO:ident, $MOSI:ident) => {
-        pub struct $name;
-        impl Remap for $name {
-            type Periph = $SPIX;
-            const REMAP: bool = $state;
-        }
-        impl<MODE> Ssck<$name> for gpio::$SCK<Input<MODE>> {}
-        impl<MODE> So<$name> for gpio::$MISO<Alternate<MODE>> {}
-        impl<MODE> Si<$name> for gpio::$MOSI<Input<MODE>> {}
-    };
-}
-
-remap_slave!(Spi1NoRemapSlave, pac::SPI1, false, PA5, PA6, PA7);
-remap_slave!(Spi1RemapSlave, pac::SPI1, true, PB3, PB4, PB5);
-remap_slave!(Spi2NoRemapSlave, pac::SPI2, false, PB13, PB14, PB15);
-#[cfg(any(feature = "high", feature = "connectivity"))]
-remap_slave!(Spi3NoRemapSlave, pac::SPI3, false, PB3, PB4, PB5);
-#[cfg(feature = "connectivity")]
-remap_slave!(Spi3RemapSlave, pac::SPI3, true, PC10, PC11, PC12);
 
 pub trait Instance:
     crate::Sealed + Deref<Target = crate::pac::spi1::RegisterBlock> + Enable + Reset + BusClock
