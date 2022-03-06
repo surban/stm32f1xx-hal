@@ -8,7 +8,6 @@ use core::u16;
 
 use core::marker::PhantomData;
 
-use crate::hal::{self, Direction};
 #[cfg(any(feature = "stm32f100", feature = "stm32f103", feature = "connectivity",))]
 use crate::pac::TIM1;
 #[cfg(feature = "medium")]
@@ -179,18 +178,18 @@ macro_rules! hal {
                 }
             }
 
-            impl<REMAP, PINS> hal::Qei for Qei<$TIMX, REMAP, PINS> {
+            impl<REMAP, PINS> embedded_hal::Qei for Qei<$TIMX, REMAP, PINS> {
                 type Count = u16;
 
                 fn count(&self) -> u16 {
                     self.tim.cnt.read().cnt().bits()
                 }
 
-                fn direction(&self) -> Direction {
+                fn direction(&self) -> embedded_hal::Direction {
                     if self.tim.cr1.read().dir().bit_is_clear() {
-                        hal::Direction::Upcounting
+                        embedded_hal::Direction::Upcounting
                     } else {
-                        hal::Direction::Downcounting
+                        embedded_hal::Direction::Downcounting
                     }
                 }
             }

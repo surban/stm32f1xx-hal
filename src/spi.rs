@@ -33,11 +33,13 @@
   ```
 */
 
+mod hal_02;
+
 use core::ops::Deref;
 use core::ptr;
 
-pub use crate::hal::spi::{FullDuplex, Mode, Phase, Polarity};
 use crate::pac::{self, RCC};
+pub use embedded_hal::spi::{Mode, Phase, Polarity};
 
 use crate::afio::MAPR;
 use crate::dma::dma1;
@@ -626,83 +628,6 @@ where
             _framesize: PhantomData,
             _operation: PhantomData,
         }
-    }
-}
-
-impl<SPI, REMAP, PINS, FrameSize, OP> crate::hal::spi::FullDuplex<FrameSize>
-    for Spi<SPI, REMAP, PINS, FrameSize, OP>
-where
-    SPI: Instance,
-    FrameSize: Copy,
-{
-    type Error = Error;
-
-    fn read(&mut self) -> nb::Result<FrameSize, Error> {
-        let sr = self.spi.sr.read();
-
-        Err(if sr.ovr().bit_is_set() {
-            nb::Error::Other(Error::Overrun)
-        } else if sr.modf().bit_is_set() {
-            nb::Error::Other(Error::ModeFault)
-        } else if sr.crcerr().bit_is_set() {
-            nb::Error::Other(Error::Crc)
-        } else if sr.rxne().bit_is_set() {
-            // NOTE(read_volatile) read only 1 byte (the svd2rust API only allows
-            // reading a half-word)
-            return Ok(self.read_data_reg());
-        } else {
-            nb::Error::WouldBlock
-        })
-    }
-
-    fn send(&mut self, data: FrameSize) -> nb::Result<(), Error> {
-        let sr = self.spi.sr.read();
-
-        Err(if sr.modf().bit_is_set() {
-            nb::Error::Other(Error::ModeFault)
-        } else if sr.crcerr().bit_is_set() {
-            nb::Error::Other(Error::Crc)
-        } else if sr.txe().bit_is_set() {
-            // NOTE(write_volatile) see note above
-            self.write_data_reg(data);
-            return Ok(());
-        } else {
-            nb::Error::WouldBlock
-        })
-    }
-}
-
-impl<SPI, REMAP, PINS, FrameSize, OP> crate::hal::blocking::spi::transfer::Default<FrameSize>
-    for Spi<SPI, REMAP, PINS, FrameSize, OP>
-where
-    SPI: Instance,
-    FrameSize: Copy,
-{
-}
-
-impl<SPI, REMAP, PINS, OP> crate::hal::blocking::spi::Write<u8> for Spi<SPI, REMAP, PINS, u8, OP>
-where
-    SPI: Instance,
-{
-    type Error = Error;
-
-    // Implement write as per the "Transmit only procedure" page 712
-    // of RM0008 Rev 20. This is more than twice as fast as the
-    // default Write<> implementation (which reads and drops each
-    // received value)
-    fn write(&mut self, words: &[u8]) -> Result<(), Error> {
-        self.spi_write(words)
-    }
-}
-
-impl<SPI, REMAP, PINS, OP> crate::hal::blocking::spi::Write<u16> for Spi<SPI, REMAP, PINS, u16, OP>
-where
-    SPI: Instance,
-{
-    type Error = Error;
-
-    fn write(&mut self, words: &[u16]) -> Result<(), Error> {
-        self.spi_write(words)
     }
 }
 

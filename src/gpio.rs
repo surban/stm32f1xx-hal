@@ -77,13 +77,14 @@ use core::convert::Infallible;
 use core::marker::PhantomData;
 
 use crate::afio;
-use crate::hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 use crate::pac::EXTI;
 
 mod partially_erased;
 pub use partially_erased::{PEPin, PartiallyErasedPin};
 mod erased;
 pub use erased::{EPin, ErasedPin};
+
+mod hal_02;
 
 /// Slew rates available for Output and relevant AlternateMode Pins
 ///
@@ -467,40 +468,6 @@ impl<const P: char, const N: u8> Pin<P, N, Debugger> {
     }
 }
 
-impl<const P: char, const N: u8> OutputPin for Pin<P, N, Dynamic> {
-    type Error = PinModeError;
-    fn set_high(&mut self) -> Result<(), Self::Error> {
-        if self.mode.is_output() {
-            self._set_state(PinState::High);
-            Ok(())
-        } else {
-            Err(PinModeError::IncorrectMode)
-        }
-    }
-    fn set_low(&mut self) -> Result<(), Self::Error> {
-        if self.mode.is_output() {
-            self._set_state(PinState::Low);
-            Ok(())
-        } else {
-            Err(PinModeError::IncorrectMode)
-        }
-    }
-}
-
-impl<const P: char, const N: u8> InputPin for Pin<P, N, Dynamic> {
-    type Error = PinModeError;
-    fn is_high(&self) -> Result<bool, Self::Error> {
-        self.is_low().map(|b| !b)
-    }
-    fn is_low(&self) -> Result<bool, Self::Error> {
-        if self.mode.is_input() {
-            Ok(self._is_low())
-        } else {
-            Err(PinModeError::IncorrectMode)
-        }
-    }
-}
-
 // Internal helper functions
 
 // NOTE: The functions in this impl block are "safe", but they
@@ -596,41 +563,6 @@ impl<const P: char, const N: u8, MODE> Pin<P, N, Output<MODE>> {
     }
 }
 
-impl<const P: char, const N: u8, MODE> OutputPin for Pin<P, N, Output<MODE>> {
-    type Error = Infallible;
-    #[inline]
-    fn set_high(&mut self) -> Result<(), Self::Error> {
-        self.set_high();
-        Ok(())
-    }
-    #[inline]
-    fn set_low(&mut self) -> Result<(), Self::Error> {
-        self.set_low();
-        Ok(())
-    }
-}
-
-impl<const P: char, const N: u8, MODE> StatefulOutputPin for Pin<P, N, Output<MODE>> {
-    #[inline]
-    fn is_set_high(&self) -> Result<bool, Self::Error> {
-        Ok(self.is_set_high())
-    }
-    #[inline]
-    fn is_set_low(&self) -> Result<bool, Self::Error> {
-        Ok(self.is_set_low())
-    }
-}
-
-impl<const P: char, const N: u8, MODE> ToggleableOutputPin for Pin<P, N, Output<MODE>> {
-    type Error = Infallible;
-
-    #[inline(always)]
-    fn toggle(&mut self) -> Result<(), Self::Error> {
-        self.toggle();
-        Ok(())
-    }
-}
-
 impl<const P: char, const N: u8, MODE> Pin<P, N, Input<MODE>> {
     #[inline]
     pub fn is_high(&self) -> bool {
@@ -642,19 +574,6 @@ impl<const P: char, const N: u8, MODE> Pin<P, N, Input<MODE>> {
     }
 }
 
-impl<const P: char, const N: u8, MODE> InputPin for Pin<P, N, Input<MODE>> {
-    type Error = Infallible;
-    #[inline]
-    fn is_high(&self) -> Result<bool, Self::Error> {
-        Ok(self.is_high())
-    }
-
-    #[inline]
-    fn is_low(&self) -> Result<bool, Self::Error> {
-        Ok(self.is_low())
-    }
-}
-
 impl<const P: char, const N: u8> Pin<P, N, Output<OpenDrain>> {
     #[inline]
     pub fn is_high(&self) -> bool {
@@ -663,19 +582,6 @@ impl<const P: char, const N: u8> Pin<P, N, Output<OpenDrain>> {
     #[inline]
     pub fn is_low(&self) -> bool {
         self._is_low()
-    }
-}
-
-impl<const P: char, const N: u8> InputPin for Pin<P, N, Output<OpenDrain>> {
-    type Error = Infallible;
-    #[inline]
-    fn is_high(&self) -> Result<bool, Self::Error> {
-        Ok(self.is_high())
-    }
-
-    #[inline]
-    fn is_low(&self) -> Result<bool, Self::Error> {
-        Ok(self.is_low())
     }
 }
 
