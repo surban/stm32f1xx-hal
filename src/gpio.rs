@@ -85,6 +85,7 @@ mod erased;
 pub use erased::{EPin, ErasedPin};
 
 mod hal_02;
+mod hal_1;
 
 /// Slew rates available for Output and relevant AlternateMode Pins
 ///
@@ -171,11 +172,7 @@ pub struct Alternate<MODE = PushPull> {
 impl<MODE> Active for Alternate<MODE> {}
 
 /// Digital output pin state
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum PinState {
-    High,
-    Low,
-}
+pub use embedded_hal::digital::v2::PinState;
 
 // Using SCREAMING_SNAKE_CASE to be consistent with other HALs
 // see 59b2740 and #125 for motivation

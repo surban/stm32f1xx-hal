@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
            fix errata.
 - `PwmHz::get_period`: fix computation of return value, prevent division by zero
 - return `i2c::Error::Timeout` instead of `nb::WouldBlock` when time is out
+- support `embedded-hal-1.0-alpha`
+- `gpio`: port and pin generics first, then mode, `PinMode` for modes instead of pins, other cleanups
 
 ### Breaking changes
 

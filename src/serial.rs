@@ -75,6 +75,7 @@ use crate::rcc::{BusClock, Clocks, Enable, Reset};
 use crate::time::{Bps, U32Ext};
 
 mod hal_02;
+mod hal_1;
 
 // USART REMAPPING, see: https://www.st.com/content/ccc/resource/technical/document/reference_manual/59/b9/ba/7f/11/af/43/d5/CD00171190.pdf/files/CD00171190.pdf/jcr:content/translations/en.CD00171190.pdf
 // Section 9.3.8
@@ -134,18 +135,7 @@ inst! {
 }
 
 /// Serial error
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum Error {
-    /// Framing error
-    Framing,
-    /// Noise error
-    Noise,
-    /// RX buffer overrun
-    Overrun,
-    /// Parity check error
-    Parity,
-}
+pub use embedded_hal_one::serial::ErrorKind as Error;
 
 pub enum WordLength {
     /// When parity is enabled, a word has 7 data bits + 1 parity bit,
@@ -514,7 +504,7 @@ impl<USART: Instance> Rx<USART> {
         let err = if sr.pe().bit_is_set() {
             Some(Error::Parity)
         } else if sr.fe().bit_is_set() {
-            Some(Error::Framing)
+            Some(Error::FrameFormat)
         } else if sr.ne().bit_is_set() {
             Some(Error::Noise)
         } else if sr.ore().bit_is_set() {
