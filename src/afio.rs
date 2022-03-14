@@ -1,9 +1,10 @@
 //! # Alternate Function I/Os
-use crate::pac::{afio, AFIO, RCC};
+use crate::pac::{self, afio, AFIO, RCC};
 
 use crate::rcc::{Enable, Reset};
 
 use crate::gpio::{
+    self, Alternate,
     Debugger, Floating, Input, PA15, {PB3, PB4},
 };
 
@@ -158,5 +159,95 @@ pub struct MAPR2 {
 impl MAPR2 {
     pub fn mapr2(&mut self) -> &afio::MAPR2 {
         unsafe { &(*AFIO::ptr()).mapr2 }
+    }
+}
+
+
+use core::marker::PhantomData;
+
+pub struct Alt<PER, PINS> {
+    _pins: PINS,
+    _marker: PhantomData<PER>,
+}
+
+pub trait Pins<PER>: crate::Sealed {}
+
+impl<PER, PINS> crate::Sealed for Alt<PER, PINS> {}
+impl<PER, PINS> Pins<PER> for Alt<PER, PINS> {}
+
+pub trait Remap<PER>: crate::Sealed + Sized {
+    fn remap(self, mapr: &mut MAPR) -> Alt<PER, Self>;
+}
+
+impl<
+        const P1: char,
+        const N1: u8,
+        const H1: bool,
+        MODE1,
+        const P2: char,
+        const N2: u8,
+        const H2: bool,
+        MODE2,
+    > crate::Sealed for (gpio::Pin<P1, N1, H1, MODE1>, gpio::Pin<P2, N2, H2, MODE2>)
+{
+}
+
+impl<INMODE, OUTMODE> Remap<pac::CAN1>
+    for (gpio::PA12<Alternate<OUTMODE>>, gpio::PA11<Input<INMODE>>)
+{
+    fn remap(self, mapr: &mut MAPR) -> Alt<pac::CAN1, Self> {
+        #[cfg(not(feature = "connectivity"))]
+        mapr.modify_mapr(|_, w| unsafe { w.can_remap().bits(0) });
+        #[cfg(feature = "connectivity")]
+        mapr.modify_mapr(|_, w| unsafe { w.can1_remap().bits(0) });
+
+        Alt {
+            _pins: self,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<INMODE, OUTMODE> Remap<pac::CAN1>
+    for (gpio::PB9<Alternate<OUTMODE>>, gpio::PB8<Input<INMODE>>)
+{
+    fn remap(self, mapr: &mut MAPR) -> Alt<pac::CAN1, Self> {
+        #[cfg(not(feature = "connectivity"))]
+        mapr.modify_mapr(|_, w| unsafe { w.can_remap().bits(0b10) });
+        #[cfg(feature = "connectivity")]
+        mapr.modify_mapr(|_, w| unsafe { w.can1_remap().bits(0b10) });
+
+        Alt {
+            _pins: self,
+            _marker: PhantomData,
+        }
+    }
+}
+
+#[cfg(feature = "connectivity")]
+impl<INMODE, OUTMODE> Remap<pac::CAN2>
+    for (gpio::PB13<Alternate<OUTMODE>>, gpio::PB12<Input<INMODE>>)
+{
+    fn remap(self, mapr: &mut MAPR) -> Alt<pac::CAN2, Self> {
+        mapr.modify_mapr(|_, w| w.can2_remap().clear_bit());
+
+        Alt {
+            _pins: self,
+            _marker: PhantomData,
+        }
+    }
+}
+
+#[cfg(feature = "connectivity")]
+impl<INMODE, OUTMODE> Remap<pac::CAN2>
+    for (gpio::PB6<Alternate<OUTMODE>>, gpio::PB5<Input<INMODE>>)
+{
+    fn remap(self, mapr: &mut MAPR) -> Alt<pac::CAN2, Self> {
+        mapr.modify_mapr(|_, w| w.can2_remap().set_bit());
+
+        Alt {
+            _pins: self,
+            _marker: PhantomData,
+        }
     }
 }

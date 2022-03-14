@@ -93,7 +93,7 @@ mod app {
         let can_rx_pin = gpioa.pa11.into_floating_input(&mut gpioa.crh);
         let can_tx_pin = gpioa.pa12.into_alternate_push_pull(&mut gpioa.crh);
         let mut afio = cx.device.AFIO.constrain();
-        can.assign_pins((can_tx_pin, can_rx_pin), &mut afio.mapr);
+        can.assign_pins((can_tx_pin, can_rx_pin).remap(&mut afio.mapr));
 
         // APB1 (PCLK1): 16MHz, Bit rate: 1000kBit/s, Sample Point 87.5%
         // Value was calculated with http://www.bittiming.can-wiki.info/

@@ -34,7 +34,7 @@ fn main() -> ! {
         let mut gpioa = dp.GPIOA.split();
         let rx = gpioa.pa11.into_floating_input(&mut gpioa.crh);
         let tx = gpioa.pa12.into_alternate_push_pull(&mut gpioa.crh);
-        can.assign_pins((tx, rx), &mut afio.mapr);
+        can.assign_pins((tx, rx).remap(&mut afio.mapr));
 
         // APB1 (PCLK1): 8MHz, Bit rate: 125kBit/s, Sample Point 87.5%
         // Value was calculated with http://www.bittiming.can-wiki.info/
