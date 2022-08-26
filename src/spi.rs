@@ -394,10 +394,6 @@ where
     SPI: Instance,
     FrameSize: Copy,
 {
-    #[deprecated(since = "0.6.0", note = "Please use release instead")]
-    pub fn free(self) -> (SPI, PINS) {
-        self.release()
-    }
     pub fn release(self) -> (SPI, PINS) {
         (self.spi, self.pins)
     }
