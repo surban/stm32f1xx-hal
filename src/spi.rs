@@ -370,8 +370,6 @@ where
             loop {
                 let sr = self.spi.sr.read();
                 if sr.txe().bit_is_set() {
-                    // NOTE(write_volatile) see note above
-                    // unsafe { ptr::write_volatile(&self.spi.dr as *const _ as *mut u8, *word) }
                     self.write_data_reg(*word);
                     if sr.modf().bit_is_set() {
                         return Err(Error::ModeFault);
@@ -381,24 +379,10 @@ where
             }
         }
         // Wait for final TXE
-        loop {
-            let sr = self.spi.sr.read();
-            if sr.txe().bit_is_set() {
-                break;
-            }
-        }
+        while self.spi.sr.read().txe().bit_is_clear() {}
         // Wait for final !BSY
-        loop {
-            let sr = self.spi.sr.read();
-            if !sr.bsy().bit_is_set() {
-                break;
-            }
-        }
+        while self.spi.sr.read().bsy().bit_is_set() {}
         // Clear OVR set due to dropped received values
-        // NOTE(read_volatile) see note above
-        // unsafe {
-        //     let _ = ptr::read_volatile(&self.spi.dr as *const _ as *const u8);
-        // }
         let _ = self.read_data_reg();
         let _ = self.spi.sr.read();
         Ok(())
@@ -490,40 +474,28 @@ where
         };
 
         spi.cr1.write(|w| {
-            w
-                // clock phase from config
-                .cpha()
-                .bit(mode.phase == Phase::CaptureOnSecondTransition)
-                // clock polarity from config
-                .cpol()
-                .bit(mode.polarity == Polarity::IdleHigh)
-                // mstr: master configuration
-                .mstr()
-                .set_bit()
-                // baudrate value
-                .br()
-                .bits(br)
-                // lsbfirst: MSB first
-                .lsbfirst()
-                .clear_bit()
-                // ssm: enable software slave management (NSS pin free for other uses)
-                .ssm()
-                .set_bit()
-                // ssi: set nss high = master mode
-                .ssi()
-                .set_bit()
-                // dff: 8 bit frames
-                .dff()
-                .clear_bit()
-                // bidimode: 2-line unidirectional
-                .bidimode()
-                .clear_bit()
-                // both TX and RX are used
-                .rxonly()
-                .clear_bit()
-                // spe: enable the SPI bus
-                .spe()
-                .set_bit()
+            // clock phase from config
+            w.cpha().bit(mode.phase == Phase::CaptureOnSecondTransition);
+            // clock polarity from config
+            w.cpol().bit(mode.polarity == Polarity::IdleHigh);
+            // mstr: master configuration
+            w.mstr().set_bit();
+            // baudrate value
+            w.br().bits(br);
+            // lsbfirst: MSB first
+            w.lsbfirst().clear_bit();
+            // ssm: enable software slave management (NSS pin free for other uses)
+            w.ssm().set_bit();
+            // ssi: set nss high = master mode
+            w.ssi().set_bit();
+            // dff: 8 bit frames
+            w.dff().clear_bit();
+            // bidimode: 2-line unidirectional
+            w.bidimode().clear_bit();
+            // both TX and RX are used
+            w.rxonly().clear_bit();
+            // spe: enable the SPI bus
+            w.spe().set_bit()
         });
 
         Spi {
@@ -550,37 +522,26 @@ where
         spi.cr2.write(|w| w.ssoe().clear_bit());
 
         spi.cr1.write(|w| {
-            w
-                // clock phase from config
-                .cpha()
-                .bit(mode.phase == Phase::CaptureOnSecondTransition)
-                // clock polarity from config
-                .cpol()
-                .bit(mode.polarity == Polarity::IdleHigh)
-                // mstr: slave configuration
-                .mstr()
-                .clear_bit()
-                // lsbfirst: MSB first
-                .lsbfirst()
-                .clear_bit()
-                // ssm: enable software slave management (NSS pin free for other uses)
-                .ssm()
-                .set_bit()
-                // ssi: set nss low = slave mode
-                .ssi()
-                .clear_bit()
-                // dff: 8 bit frames
-                .dff()
-                .clear_bit()
-                // bidimode: 2-line unidirectional
-                .bidimode()
-                .clear_bit()
-                // both TX and RX are used
-                .rxonly()
-                .clear_bit()
-                // spe: enable the SPI bus
-                .spe()
-                .set_bit()
+            // clock phase from config
+            w.cpha().bit(mode.phase == Phase::CaptureOnSecondTransition);
+            // clock polarity from config
+            w.cpol().bit(mode.polarity == Polarity::IdleHigh);
+            // mstr: slave configuration
+            w.mstr().clear_bit();
+            // lsbfirst: MSB first
+            w.lsbfirst().clear_bit();
+            // ssm: enable software slave management (NSS pin free for other uses)
+            w.ssm().set_bit();
+            // ssi: set nss low = slave mode
+            w.ssi().clear_bit();
+            // dff: 8 bit frames
+            w.dff().clear_bit();
+            // bidimode: 2-line unidirectional
+            w.bidimode().clear_bit();
+            // both TX and RX are used
+            w.rxonly().clear_bit();
+            // spe: enable the SPI bus
+            w.spe().set_bit()
         });
 
         Spi {
@@ -772,25 +733,18 @@ macro_rules! spi_dma {
 
                 atomic::compiler_fence(Ordering::Release);
                 self.channel.ch().cr.modify(|_, w| {
-                    w
-                        // memory to memory mode disabled
-                        .mem2mem()
-                        .clear_bit()
-                        // medium channel priority level
-                        .pl()
-                        .medium()
-                        // 8-bit memory size
-                        .msize()
-                        .bits8()
-                        // 8-bit peripheral size
-                        .psize()
-                        .bits8()
-                        // circular mode disabled
-                        .circ()
-                        .clear_bit()
-                        // write to memory
-                        .dir()
-                        .clear_bit()
+                    // memory to memory mode disabled
+                    w.mem2mem().clear_bit();
+                    // medium channel priority level
+                    w.pl().medium();
+                    // 8-bit memory size
+                    w.msize().bits8();
+                    // 8-bit peripheral size
+                    w.psize().bits8();
+                    // circular mode disabled
+                    w.circ().clear_bit();
+                    // write to memory
+                    w.dir().clear_bit()
                 });
                 self.start();
 
@@ -816,25 +770,18 @@ macro_rules! spi_dma {
 
                 atomic::compiler_fence(Ordering::Release);
                 self.channel.ch().cr.modify(|_, w| {
-                    w
-                        // memory to memory mode disabled
-                        .mem2mem()
-                        .clear_bit()
-                        // medium channel priority level
-                        .pl()
-                        .medium()
-                        // 8-bit memory size
-                        .msize()
-                        .bits8()
-                        // 8-bit peripheral size
-                        .psize()
-                        .bits8()
-                        // circular mode disabled
-                        .circ()
-                        .clear_bit()
-                        // read from memory
-                        .dir()
-                        .set_bit()
+                    // memory to memory mode disabled
+                    w.mem2mem().clear_bit();
+                    // medium channel priority level
+                    w.pl().medium();
+                    // 8-bit memory size
+                    w.msize().bits8();
+                    // 8-bit peripheral size
+                    w.psize().bits8();
+                    // circular mode disabled
+                    w.circ().clear_bit();
+                    // read from memory
+                    w.dir().set_bit()
                 });
                 self.start();
 
@@ -878,46 +825,32 @@ macro_rules! spi_dma {
 
                 atomic::compiler_fence(Ordering::Release);
                 self.rxchannel.ch().cr.modify(|_, w| {
-                    w
-                        // memory to memory mode disabled
-                        .mem2mem()
-                        .clear_bit()
-                        // medium channel priority level
-                        .pl()
-                        .medium()
-                        // 8-bit memory size
-                        .msize()
-                        .bits8()
-                        // 8-bit peripheral size
-                        .psize()
-                        .bits8()
-                        // circular mode disabled
-                        .circ()
-                        .clear_bit()
-                        // write to memory
-                        .dir()
-                        .clear_bit()
+                    // memory to memory mode disabled
+                    w.mem2mem().clear_bit();
+                    // medium channel priority level
+                    w.pl().medium();
+                    // 8-bit memory size
+                    w.msize().bits8();
+                    // 8-bit peripheral size
+                    w.psize().bits8();
+                    // circular mode disabled
+                    w.circ().clear_bit();
+                    // write to memory
+                    w.dir().clear_bit()
                 });
                 self.txchannel.ch().cr.modify(|_, w| {
-                    w
-                        // memory to memory mode disabled
-                        .mem2mem()
-                        .clear_bit()
-                        // medium channel priority level
-                        .pl()
-                        .medium()
-                        // 8-bit memory size
-                        .msize()
-                        .bits8()
-                        // 8-bit peripheral size
-                        .psize()
-                        .bits8()
-                        // circular mode disabled
-                        .circ()
-                        .clear_bit()
-                        // read from memory
-                        .dir()
-                        .set_bit()
+                    // memory to memory mode disabled
+                    w.mem2mem().clear_bit();
+                    // medium channel priority level
+                    w.pl().medium();
+                    // 8-bit memory size
+                    w.msize().bits8();
+                    // 8-bit peripheral size
+                    w.psize().bits8();
+                    // circular mode disabled
+                    w.circ().clear_bit();
+                    // read from memory
+                    w.dir().set_bit()
                 });
                 self.start();
 
