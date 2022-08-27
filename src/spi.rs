@@ -379,9 +379,9 @@ where
             }
         }
         // Wait for final TXE
-        while self.spi.sr.read().txe().bit_is_clear() {}
+        while !self.is_tx_empty() {}
         // Wait for final !BSY
-        while self.spi.sr.read().bsy().bit_is_set() {}
+        while self.is_busy() {}
         // Clear OVR set due to dropped received values
         let _ = self.read_data_reg();
         let _ = self.spi.sr.read();
@@ -429,16 +429,25 @@ where
     }
 
     /// Returns true if the tx register is empty (and can accept data)
+    #[inline]
     pub fn is_tx_empty(&self) -> bool {
         self.spi.sr.read().txe().bit_is_set()
     }
 
     /// Returns true if the rx register is not empty (and can be read)
+    #[inline]
     pub fn is_rx_not_empty(&self) -> bool {
         self.spi.sr.read().rxne().bit_is_set()
     }
 
+    /// Returns true if the transfer is in progress
+    #[inline]
+    pub fn is_busy(&self) -> bool {
+        self.spi.sr.read().bsy().bit_is_set()
+    }
+
     /// Returns true if data are received and the previous data have not yet been read from SPI_DR.
+    #[inline]
     pub fn is_overrun(&self) -> bool {
         self.spi.sr.read().ovr().bit_is_set()
     }
