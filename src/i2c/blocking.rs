@@ -192,6 +192,11 @@ impl<I2C, PINS> BlockingI2c<I2C, PINS>
 where
     I2C: Instance,
 {
+    /// Perform an I2C software reset
+    pub fn reset(&mut self) {
+        self.nb.reset();
+    }
+
     /// Check if START condition is generated. If the condition is not generated, this
     /// method returns `WouldBlock` so the program can act accordingly
     /// (busy wait, async, ...)

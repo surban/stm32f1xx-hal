@@ -227,7 +227,7 @@ where
     }
 
     /// Perform an I2C software reset
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.i2c.cr1.write(|w| w.pe().set_bit().swrst().set_bit());
         self.i2c.cr1.reset();
         self.init();
